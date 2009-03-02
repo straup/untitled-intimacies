@@ -1,0 +1,54 @@
+These are a series of tools for generating "pinwin" style maps of twitter posts
+and uploading them to Flickr. For example:
+
+http://flickr.com/photos/straup/sets/72157610685215313/
+
+# USAGE (simple)
+
+$> perl ./map_post.pl -c /yer/details.cfg -l 'lat,lon' -u http://twitter.com/you/status/1234
+
+# Change the zoom level (default is 15)
+
+$> perl ./map_post.pl ... -z 15
+
+# Geotag as "indoors"
+
+$> perl ./map_post.pl ... -g 1 
+
+# Geotag as "outdoors"
+
+$> perl ./map_post.pl ... -g 2 
+
+# DON'T FORGET (that ws-pinwin needs to be running first)
+
+$> python /path/to/modestmaps/py/ws-pinwin.py &
+
+# SAMPLE CONFIG
+
+[twitter]
+username=USER
+password=PSWD
+
+[flickr]
+api_key=APIKEY
+api_secret=SECRET
+auth_token=TOKEN
+api_handler=LibXML
+is_public=0
+is_friend=1
+is_family=1
+
+[bin]
+webkit2png_python=/Library/Frameworks/Python.framework/Versions/2.5/bin/python2.5
+
+# REQUIREMENTS
+
+PyObjC (comes with built-in Python until OS X 10.5)
+
+ModestMaps
+
+Flickr::Upload.pm
+Net::Flickr::API.pm
+Net::ModestMaps.pm
+Image::Size.pm
+LWP::Simple.pm
