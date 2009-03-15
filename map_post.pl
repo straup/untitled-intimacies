@@ -16,7 +16,9 @@ use Net::Flickr::API;
 use Net::ModestMaps;
 
 use Image::Size;
-use LWP::Simple;
+
+use LWP::UserAgent;
+use HTTP::Request;
 
 {
         &main();
@@ -55,27 +57,34 @@ sub main {
         my $tmp_crp = File::Spec->catfile($tmp, "$tw-cr.png");
         my $tmp_html = File::Spec->catfile($tmp, "$tw.html");
 
-        print "fetch post\n";
-        
-        my $tw_auth = "$tw_username:$tw_password";
-
-        my $url = $tw_url;
-        $url =~ s!^(http://)!$1$tw_auth\@!;
-
         $tw_url =~ m!status/(\d+)/?!;
         my $tw_id = $1;
 
-        if (! getstore($url, $tmp_html)){
-            warn "failed to retrieve '$tw_url', $!";
+        print "fetch post #$tw_id\n";
+
+        my $ua = LWP::UserAgent->new();
+
+        my $req = HTTP::Request->new('GET' => $tw_url);
+        $req->authorization_basic($tw_username, $tw_password);
+
+        my $res = $ua->request($req);
+
+        if (! $res->is_success()){
+            warn "failed to fetch '$tw_url', with error code " . $res->code();
             return 0;
         }
-        
+
+        my $fh = FileHandle->new();
+        $fh->open(">$tmp_html");
+        $fh->print($res->content());
+        $fh->close();
+
         #
         
         print "render post\n";
         
         my $wk2png = "$wkpython $webkit2png --full -o $tmp_nam file://$tmp_html";
-        
+
         system($wk2png);
 
         # 
@@ -105,6 +114,7 @@ sub main {
         );
 
         print "map post\n";
+        print Dumper(\%args);
 
         my $mm = Net::ModestMaps->new();
         my $data = $mm->draw(\%args);
