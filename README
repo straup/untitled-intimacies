@@ -7,6 +7,11 @@ http://flickr.com/photos/straup/sets/72157610685215313/
 
 $> perl ./map_post.pl -c /yer/details.cfg -l 'lat,lon' -u http://twitter.com/you/status/1234
 
+# Use a screenshot instead of webkit2png (usually, because Twitter is doing
+# weird auth-y stuff they won't explain to anyone...)
+
+$> perl ./map_post.pl -c /yer/details.cfg -l 'lat,lon' -u /path/to/screenshot
+
 # Change the zoom level (default is 15)
 
 $> perl ./map_post.pl ... -z 15
@@ -34,9 +39,15 @@ api_key=APIKEY
 api_secret=SECRET
 auth_token=TOKEN
 api_handler=LibXML
+# photo viewing permissions
 is_public=0
 is_friend=1
 is_family=1
+# geo viewing permissions
+geo_is_public=0
+geo_is_contact=0
+geo_is_friend=1
+geo_is_family=1
 
 [bin]
 webkit2png_python=/Library/Frameworks/Python.framework/Versions/2.5/bin/python2.5

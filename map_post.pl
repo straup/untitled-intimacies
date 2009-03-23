@@ -28,77 +28,36 @@ use HTTP::Request;
 sub main {
 
         my %opts = ();
-        getopts('c:u:l:g:z:', \%opts);
+        getopts('c:u:l:g:z:p:P:i:', \%opts);
 
         my $cfg = Config::Simple->new($opts{'c'});
 
-        my $tw_screenname = $cfg->param("twitter.screenname");
-        my $tw_username = $cfg->param("twitter.username");
-        my $tw_password = $cfg->param("twitter.password");
+        #
+        # Hello world?
+        #
 
-        my $tw_url = $opts{'u'};
+        my $tmp_crp = &mk_crop($cfg, \%opts);
+
+        if (! -f $tmp_crp){
+            return 0;
+        }
+
+        #
+        # Some details...
+        #
 
         my ($lat, $lon) = split(",", $opts{'l'});
 
         $lat = trim($lat);
         $lon = trim($lon);
 
-        my $wkpython = $cfg->param("bin.webkit2png_python");
-
-        my $prog_dir = dirname($0);
-        my $webkit2png = File::Spec->catfile($prog_dir, "webkit2png.py");
-        my $crop =  File::Spec->catfile($prog_dir, "crop_tweet.py");
-
-        my $tmp = File::Temp::tempdir();
-
-        my $tw = "tw-" . time();
-        my $tmp_nam = File::Spec->catfile($tmp, $tw);
-        my $tmp_png = File::Spec->catfile($tmp, "$tw-full.png");
-        my $tmp_crp = File::Spec->catfile($tmp, "$tw-cr.png");
-        my $tmp_html = File::Spec->catfile($tmp, "$tw.html");
-
-        $tw_url =~ m!status/(\d+)/?!;
-        my $tw_id = $1;
-
-        print "fetch post #$tw_id\n";
-
-        my $ua = LWP::UserAgent->new();
-
-        my $req = HTTP::Request->new('GET' => $tw_url);
-        $req->authorization_basic($tw_username, $tw_password);
-
-        my $res = $ua->request($req);
-
-        if (! $res->is_success()){
-            warn "failed to fetch '$tw_url', with error code " . $res->code();
-            return 0;
-        }
-
-        my $fh = FileHandle->new();
-        $fh->open(">$tmp_html");
-        $fh->print($res->content());
-        $fh->close();
-
-        #
-        
-        print "render post\n";
-        
-        my $wk2png = "$wkpython $webkit2png --full -o $tmp_nam file://$tmp_html";
-
-        system($wk2png);
-
-        # 
-
-        my $cmd = "$crop $tmp_png $tmp_crp";
-        print $cmd . "\n";
-
-        system($cmd);
-
-        # 
-
         my ($w, $h) = imgsize($tmp_crp);
 
         my $zoom = $opts{'z'} || 14;
+
+        #
+        # Hello, ModestMaps
+        #
 
         my %args = (
             'provider' => 'MICROSOFT_AERIAL',
@@ -114,14 +73,20 @@ sub main {
         );
 
         print "map post\n";
-        print Dumper(\%args);
 
         my $mm = Net::ModestMaps->new();
         my $data = $mm->draw(\%args);
         
-        print Dumper($data);
+        if (! -f $data->{'path'}){
+            warn "failed to generate a (modest) map!";
+            return 0;
+        }
 
-        print "post map\n";
+        #
+        # Now post to Flickr
+        #
+
+        print "post map $data->{'path'}\n";
 
         my %fl_args = ('key' => $cfg->param("flickr.api_key"),
                        'secret' => $cfg->param("flickr.api_secret"));
@@ -132,13 +97,9 @@ sub main {
 
         my $ua = Flickr::Upload->new(\%fl_args);
 
-        #
-        # FIX ME: make me cli opts too...
-        #
+        my ($pub, $fr, $fa) = &photo_perms($cfg, \%opts);
 
-        my $pub = $cfg->param("flickr.is_public");
-        my $fr = $cfg->param("flickr.is_friend");
-        my $fa = $cfg->param("flickr.is_family");
+        my $tw_id = post_id(\%opts);
 
         my $id = $ua->upload('photo' => $data->{'path'},
                              'auth_token' => $cfg->param("flickr.auth_token"),
@@ -151,17 +112,18 @@ sub main {
 
         print "FLICKR ID $id\n";
 
-        print "geotag post\n";
+        print "geotag post: $lat, $lon\n";
 
         my $fl = Net::Flickr::API->new($cfg);
 
         $fl->api_call({'method' => 'flickr.photos.geo.setLocation',
                        'args' => {'lat' => $lat, 'lon' => $lon, 'photo_id' => $id}});
 
-        print "set perms\n";
+        my ($gpub, $gcon, $gfr, $gfa) = &geo_perms($cfg, \%opts);
+        print "set geo perms: $gpub, $gcon, $gfr, $gfr\n";
 
         $fl->api_call({'method' => 'flickr.photos.geo.setPerms',
-                       'args' => {'is_public' => 1, 'is_friend' => 0, 'is_family' => 0, 'is_contact' => 0, 'photo_id' => $id}});
+                       'args' => {'is_public' => $gpub, 'is_friend' => $gfr, 'is_family' => $gfa, 'is_contact' => $gcon, 'photo_id' => $id}});
 
 
         #
@@ -176,18 +138,173 @@ sub main {
         }
 
         unlink($tmp_crp);
-        unlink($tmp_png);
-        unlink($tmp_html);
         unlink($data->{'path'});
 
         return;
 }
+
 
 sub trim {
     my $str = shift;
     $str =~ s/^\s+//g;
     $str =~ s/\s+$//g;
     return $str;
+}
+
+sub mk_crop {
+    my $cfg = shift;
+    my $opts = shift;
+
+    my $tw_url = $opts->{'u'};
+
+    #
+    # In the event of a screenshot or something like it...
+    #
+
+    if (-f $tw_url){
+        return $tw_url;
+    }
+
+    my $tw_screenname = $cfg->param("twitter.screenname");
+    my $tw_username = $cfg->param("twitter.username");
+    my $tw_password = $cfg->param("twitter.password");
+    
+    my $wkpython = $cfg->param("bin.webkit2png_python");
+
+    my $prog_dir = dirname($0);
+    my $webkit2png = File::Spec->catfile($prog_dir, "webkit2png.py");
+    my $crop =  File::Spec->catfile($prog_dir, "crop_tweet.py");
+    
+    my $tmp = File::Temp::tempdir();
+
+    my $tw = "tw-" . time();
+    my $tmp_nam = File::Spec->catfile($tmp, $tw);
+    my $tmp_png = File::Spec->catfile($tmp, "$tw-full.png");
+    my $tmp_crp = File::Spec->catfile($tmp, "$tw-cr.png");
+    my $tmp_html = File::Spec->catfile($tmp, "$tw.html");
+    
+    $tw_url =~ m!status/(\d+)/?!;
+    my $tw_id = $1;
+            
+    print "fetch post #$tw_id\n";
+
+    my $ua = LWP::UserAgent->new();
+    $ua->agent("Mozilla/5.001 (windows; U; NT4.0; en-US; rv:1.0) Gecko/25250101");
+            
+    my $req = HTTP::Request->new('GET' => $tw_url);
+    $req->authorization_basic($tw_username, $tw_password);
+            
+    my $res = $ua->request($req);
+            
+    if (! $res->is_success()){
+        warn "failed to fetch '$tw_url', with error code " . $res->code();
+        return 0;
+    }
+    
+    my $fh = FileHandle->new();
+    $fh->open(">$tmp_html");
+    $fh->print($res->content());
+    $fh->close();
+    
+    # 
+
+    print "render post\n";
+    
+    my $wk2png = "$wkpython $webkit2png --full -o $tmp_nam file://$tmp_html";
+    system($wk2png);
+            
+    # 
+            
+    my $cmd = "$crop $tmp_png $tmp_crp";
+    print $cmd . "\n";
+    
+    system($cmd);
+    
+    unlink($tmp_png);
+    unlink($tmp_html);
+
+    return $tmp_crp;
+}
+
+sub post_id {
+    my $opts = shift;
+
+    if (my $id = $opts->{'i'}){
+        return $id;
+    }
+
+    if ($opts->{'u'} =~ m!status/(\d+)/?!){
+        return $1;
+    }
+
+    return time();
+}
+
+sub photo_perms {
+    my $cfg = shift;
+    my $opts = shift;
+
+    if (! $opts->{'p'}){
+        my $pub = $cfg->param("flickr.is_public") || 0;
+        my $fr = $cfg->param("flickr.is_friend") || 0;
+        my $fa = $cfg->param("flickr.is_family") || 0;
+        
+        return ($pub, $fr, $fa);
+    }
+
+    if ($opts->{'p'} =~ /^pub/){
+        return (1, 0, 0);
+    }
+
+    if ($opts->{'p'} =~ /^fr/){
+        return (0, 1, 0);
+    }
+
+    if ($opts->{'p'} =~ /^fa/){
+        return (0, 0, 1);
+    }
+
+    if ($opts->{'p'} =~ /^ff/){
+        return (0, 1, 1);
+    }
+
+    return (0, 0, 0);
+}
+
+sub geo_perms {
+    my $cfg = shift;
+    my $opts = shift;
+
+    if (! $opts->{'P'}){
+        my $pub = $cfg->param("flickr.geo_is_public") || 0;
+        my $con = $cfg->param("flickr.geo_is_contact") || 0;
+        my $fr = $cfg->param("flickr.geo_is_friend") || 0;
+        my $fa = $cfg->param("flickr.geo_is_family") || 0;
+        
+        return ($pub, $con, $fr, $fa);
+    }
+
+    if ($opts->{'P'} =~ /^pub/){
+        return (1, 0, 0, 0);
+    }
+
+    if ($opts->{'P'} =~ /^con/){
+        return (0, 1, 0, 0);
+    }
+
+    if ($opts->{'P'} =~ /^fr/){
+        return (0, 0, 1, 0);
+    }
+
+    if ($opts->{'P'} =~ /^fa/){
+        return (0, 0, 0, 1);
+    }
+
+    if ($opts->{'P'} =~ /^ff/){
+        return (0, 0, 1, 1);
+    }
+
+    return (0, 0, 0, 0);
 }
 
 __END__
