@@ -3,6 +3,10 @@ and uploading them to Flickr. For example:
 
 http://flickr.com/photos/straup/sets/72157610685215313/
 
+# START HERE, FOR NOW 
+
+http://www.aaronland.info/weblog/2009/03/14/buckets/#intimacies
+
 # USAGE (simple)
 
 $> perl ./map_post.pl -c /yer/details.cfg -l 'lat,lon' -u http://twitter.com/you/status/1234
@@ -24,6 +28,10 @@ $> perl ./map_post.pl ... -g 1
 
 $> perl ./map_post.pl ... -g 2 
 
+# With a custom height/width
+
+$> perl ./map_post.pl ... -h 2048 -w 1024 
+
 # DON'T FORGET (that ws-pinwin needs to be running first)
 
 $> python /path/to/modestmaps/py/ws-pinwin.py &
@@ -38,6 +46,7 @@ password=PSWD
 api_key=APIKEY
 api_secret=SECRET
 auth_token=TOKEN
+# or XPath, this is a Net::Flickr::API-ism
 api_handler=LibXML
 # photo viewing permissions
 is_public=0
@@ -50,16 +59,20 @@ geo_is_friend=1
 geo_is_family=1
 
 [bin]
+# which ever version of Python has the PyObjC love...
 webkit2png_python=/Library/Frameworks/Python.framework/Versions/2.5/bin/python2.5
 
 # REQUIREMENTS
 
-PyObjC (comes with built-in Python until OS X 10.5)
+PyObjC - comes with built-in Python until OS X 10.5 (http://pyobjc.sourceforge.net/)
 
-ModestMaps
+ModestMaps (http://www.modestmaps.com)
+
+# From the CPAN (http://cpan.org) 
 
 Flickr::Upload.pm
 Net::Flickr::API.pm
 Net::ModestMaps.pm
 Image::Size.pm
 LWP::Simple.pm
+XML::XPath.pm or XML::LibXML.pm
