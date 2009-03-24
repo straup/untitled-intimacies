@@ -27,8 +27,10 @@ use HTTP::Request;
 
 sub main {
 
+    	# FIX ME: use Pod::Usage
+
         my %opts = ();
-        getopts('c:u:l:g:z:p:P:i:', \%opts);
+        getopts('c:u:l:g:z:p:P:i:h:w:', \%opts);
 
         my $cfg = Config::Simple->new($opts{'c'});
 
@@ -59,14 +61,17 @@ sub main {
         # Hello, ModestMaps
         #
 
+        my $height = $opts{'h'} || 1024;
+        my $width = $opts{'w'} || 1024;
+
         my %args = (
             'provider' => 'MICROSOFT_AERIAL',
             'method' => 'center',
             'latitude' => $lat, 
             'longitude' => $lon,
             'zoom' => $zoom,
-            'height' => 1024,
-            'width' => 1024,
+            'height' => $height,
+            'width' => $width,
             'filter' => 'atkinson',
             'bleed' => 1,
             'marker' => "twitter,$lat,$lon,$w,$h,file://$tmp_crp",
