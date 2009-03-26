@@ -178,6 +178,7 @@ sub mk_crop {
 
     my $prog_dir = dirname($0);
     my $webkit2png = File::Spec->catfile($prog_dir, "webkit2png.py");
+    my $fetch =  File::Spec->catfile($prog_dir, "fetch_tweet.pl");
     my $crop =  File::Spec->catfile($prog_dir, "crop_tweet.py");
     
     my $tmp = File::Temp::tempdir();
@@ -191,40 +192,35 @@ sub mk_crop {
     $tw_url =~ m!status/(\d+)/?!;
     my $tw_id = $1;
             
+    # fetch the html
+
     print "fetch post #$tw_id\n";
 
-    my $ua = LWP::UserAgent->new();
-    $ua->agent("Mozilla/5.001 (windows; U; NT4.0; en-US; rv:1.0) Gecko/25250101");
-            
-    my $req = HTTP::Request->new('GET' => $tw_url);
-    $req->authorization_basic($tw_username, $tw_password);
-            
-    my $res = $ua->request($req);
-            
-    if (! $res->is_success()){
-        warn "failed to fetch '$tw_url', with error code " . $res->code();
+    my $fetch_cmd = "$fetch -c $opts->{'c'} -o $tmp_html -u $tw_url";
+    print $fetch_cmd . "\n";
+
+    system($fetch_cmd);
+    
+    if (! -f $tmp_html){
         return 0;
     }
-    
-    my $fh = FileHandle->new();
-    $fh->open(">$tmp_html");
-    $fh->print($res->content());
-    $fh->close();
-    
-    # 
+
+    # render the html
 
     print "render post\n";
     
     my $wk2png = "$wkpython $webkit2png --full -o $tmp_nam file://$tmp_html";
     system($wk2png);
             
-    # 
+    # crop the image
             
     my $cmd = "$crop $tmp_png $tmp_crp";
     print $cmd . "\n";
     
     system($cmd);
-    
+
+    # 
+
     unlink($tmp_png);
     unlink($tmp_html);
 
@@ -257,6 +253,10 @@ sub photo_perms {
         return ($pub, $fr, $fa);
     }
 
+    if ($opts->{'p'} =~ /^pri/){
+        return (0, 0, 0);
+    }
+
     if ($opts->{'p'} =~ /^pub/){
         return (1, 0, 0);
     }
@@ -287,6 +287,10 @@ sub geo_perms {
         my $fa = $cfg->param("flickr.geo_is_family") || 0;
         
         return ($pub, $con, $fr, $fa);
+    }
+
+    if ($opts->{'P'} =~ /^pri/){
+        return (0, 0, 0, 0);
     }
 
     if ($opts->{'P'} =~ /^pub/){
