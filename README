@@ -76,3 +76,5 @@ Net::ModestMaps.pm
 Image::Size.pm
 LWP::Simple.pm
 XML::XPath.pm or XML::LibXML.pm
+IO::AtomicFile
+WWW::Mechanize
