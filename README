@@ -11,8 +11,7 @@ http://www.aaronland.info/weblog/2009/03/14/buckets/#intimacies
 
 $> perl ./map_post.pl -c /yer/details.cfg -l 'lat,lon' -u http://twitter.com/you/status/1234
 
-# Use a screenshot instead of webkit2png (usually, because Twitter is doing
-# weird auth-y stuff they won't explain to anyone...)
+# Use a screenshot instead
 
 $> perl ./map_post.pl -c /yer/details.cfg -l 'lat,lon' -u /path/to/screenshot
 
