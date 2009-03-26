@@ -17,9 +17,6 @@ use Net::ModestMaps;
 
 use Image::Size;
 
-use LWP::UserAgent;
-use HTTP::Request;
-
 {
         &main();
         exit;
