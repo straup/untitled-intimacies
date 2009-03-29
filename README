@@ -65,7 +65,7 @@ webkit2png_python=/Library/Frameworks/Python.framework/Versions/2.5/bin/python2.
 
 PyObjC - comes with built-in Python until OS X 10.5 (http://pyobjc.sourceforge.net/)
 
-ModestMaps (http://www.modestmaps.com)
+ModestMaps - from trunk, changeset 795 or higher (http://www.modestmaps.com)
 
 # From the CPAN (http://cpan.org) 
 

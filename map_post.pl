@@ -71,6 +71,7 @@ sub main {
             'width' => $width,
             'filter' => 'atkinson',
             'bleed' => 1,
+            'noshadow' => 1,
             'marker' => "twitter,$lat,$lon,$w,$h,file://$tmp_crp",
         );
 
@@ -83,6 +84,10 @@ sub main {
             warn "failed to generate a (modest) map!";
             return 0;
         }
+
+        # use Data::Dumper;
+        # print Dumper($data);
+        # return;
 
         #
         # Now post to Flickr
