@@ -38,9 +38,9 @@ w = 630
 h = stop_y - start_y
 
 x1=85
-y1=52
+y1=48
 x2=x1 + w
-y2=y1 + h + 32
+y2=y1 + h + 28
 
 cr=im.crop((x1,y1,x2,y2))
 cr.save(out)
