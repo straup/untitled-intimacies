@@ -32,7 +32,7 @@ sub main {
                      "session[password]" => $cfg->param("twitter.password"));
 
         $m->submit_form(
-                        form_number => 2,
+                        form_number => 1,
                         fields    => \%login,
                         button    => ""
                        );
