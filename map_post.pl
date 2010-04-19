@@ -62,7 +62,7 @@ sub main {
         my $width = $opts{'w'} || 1024;
 
         my %args = (
-            'provider' => 'MICROSOFT_AERIAL',
+            'provider' => 'YAHOO_AERIAL',
             'method' => 'center',
             'latitude' => $lat, 
             'longitude' => $lon,
@@ -76,6 +76,8 @@ sub main {
         );
 
         print "map post\n";
+
+        print Dumper(\%args);
 
         my $mm = Net::ModestMaps->new();
         my $data = $mm->draw(\%args);
